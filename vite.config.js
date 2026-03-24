@@ -23,6 +23,7 @@ export default defineConfig({
             targets: [
                 { src: "src/manifest.json", dest: "." },
                 { src: "src/sidebar.html", dest: "." },
+                { src: "src/howto.html", dest: "." },
                 { src: "src/background.js", dest: "." },
                 { src: "src/style.css", dest: "." },
                 { src: "readme.md", dest: "." },
