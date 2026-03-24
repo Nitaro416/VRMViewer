@@ -6,8 +6,11 @@ import {VRMAnimationLoaderPlugin, VRMLookAtQuaternionProxy} from "@pixiv/three-v
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
 
 const btnSelect = document.getElementById("selectFolder");
-const loaderUI = document.getElementById("loader");
+const backBtn = document.getElementById("backBtn");
 const canvas = document.querySelector("canvas");
+const progressContainer = document.getElementById("progress-container");
+const progressFill = document.getElementById("progress-fill");
+const progressText = document.getElementById("progress-text");
 
 // ============================================================
 // THREE CORE
@@ -83,61 +86,107 @@ let breathAmount =
 // ============================================================
 const clock = new THREE.Timer();
 
+// ============================================================
+// FLG
+// ============================================================
+let isReadyToRender = false;
+
 // ================================
 // Folder Access
 // ================================
 btnSelect.onclick = async () => {
-    const dir = await window.showDirectoryPicker({
-        id: "vrm-viewer-folder",
-        mode: "read"
-    });
-    await startFolder(dir);
+    try {
+        const dir = await window.showDirectoryPicker({
+            id: "vrm-viewer-folder",
+            mode: "read"
+        });
+
+        setLoadingState();
+        await startFolder(dir);
+
+    } catch (err) {
+        handleError(err);
+    }
 };
 
 // ================================
 // Folder Scan And Run
 // ================================
 async function startFolder(dir) {
-    btnSelect.style.display = "none";
-    loaderUI.classList.remove("hidden");
+    try {
+        showProgress();
+        setProgress(0.05, "フォルダスキャン");
 
-    let vrmFile = null;
-    let vrmaFiles = [];
-    let json = null;
+        let vrmFile = null;
+        let vrmaFiles = [];
+        let json = null;
 
-    async function scan(d) {
-        for await(const [name, handle] of d.entries()) {
-            if (handle.kind === "file") {
-                const file = await handle.getFile();
-                if (name.endsWith(".vrm")) vrmFile = file;
-                if (name.endsWith(".vrma")) vrmaFiles.push(file);
-                if (name.endsWith(".json")) json = await loadJSON(file);
+        async function scan(d) {
+            for await (const [name, handle] of d.entries()) {
+                if (handle.kind === "file") {
+                    const file = await handle.getFile();
+                    if (name.endsWith(".vrm")) vrmFile = file;
+                    if (name.endsWith(".vrma")) vrmaFiles.push(file);
+                    if (name.endsWith(".json")) json = await loadJSON(file);
+                }
+                if (handle.kind === "directory") await scan(handle);
             }
-            if (handle.kind === "directory") await scan(handle);
         }
-    }
 
-    await scan(dir);
-    await run(vrmFile, vrmaFiles, json);
-    loaderUI.style.display = "none";
+        await scan(dir);
+
+        if (!vrmFile) {
+            throw new Error("VRMファイルが見つかりません");
+        }
+
+        setProgress(0.1, "読み込み開始");
+
+        await run(vrmFile, vrmaFiles, json);
+
+    } catch (err) {
+        hideProgress();
+        handleError(err);
+    }
 }
 
 // ================================
 // Run
 // ================================
 async function run(vrmFile, vrmaFiles, jsonFile) {
-    initScene();
-    initCamera();
-    initLoader();
-    await loadVRM(vrmFile);
-    currentVrm.scene.traverse(obj => {
-        obj.frustumCulled = false;
-    });
-    registerVRMA(vrmaFiles);
-    await preloadVRMA();
-    if (jsonFile && jsonFile[0]?.background) applyBackground(jsonFile[0]?.background);
-    if (jsonFile) startSequence(jsonFile);
-    renderLoop();
+    try {
+        showProgress();
+
+        initScene();
+        initCamera();
+        initLoader();
+
+        await loadVRM(vrmFile);
+
+        currentVrm.scene.traverse(obj => {
+            obj.frustumCulled = false;
+        });
+
+        registerVRMA(vrmaFiles);
+        await preloadVRMA();
+
+        if (jsonFile && jsonFile[0]?.background) {
+            applyBackground(jsonFile[0]?.background);
+        }
+
+        if (jsonFile) startSequence(jsonFile);
+
+        renderLoop();
+
+        setTimeout(() => {
+            hideProgress();
+            canvas.classList.add("visible");
+            isReadyToRender = true;
+        }, 300);
+
+    } catch (err) {
+        hideProgress();
+        handleError(err);
+    }
 }
 
 // ================================
@@ -196,20 +245,46 @@ function initLoader() {
 }
 
 async function loadVRM(file) {
-    const gltf = await new Promise(res => {
-        loader.load(URL.createObjectURL(file), res);
+    if (!file) {
+        throw new Error("VRMファイルが見つかりません");
+    }
+
+    setProgress(0.1, "VRM読み込み");
+
+    const gltf = await new Promise((res, rej) => {
+        loader.load(
+            URL.createObjectURL(file),
+            res,
+            (e) => {
+                if (e.total) {
+                    setProgress(0.1 + (e.loaded / e.total) * 0.4, "VRM読み込み");
+                }
+            },
+            rej
+        );
     });
+
+    if (!gltf.userData.vrm) {
+        throw new Error("VRMの解析に失敗しました");
+    }
+
     currentVrm = gltf.userData.vrm;
     scene.add(currentVrm.scene);
-    if(currentVrm.lookAt){
+
+    if (currentVrm.lookAt) {
         currentVrm.lookAt.quaternionProxy =
             new VRMLookAtQuaternionProxy(currentVrm.lookAt);
     }
+
     mixer = new THREE.AnimationMixer(currentVrm.scene);
-    scene.add(eyeLookTarget)
+
+    scene.add(eyeLookTarget);
+
     if (currentVrm.lookAt) {
-        currentVrm.lookAt.target = eyeLookTarget
+        currentVrm.lookAt.target = eyeLookTarget;
     }
+
+    setProgress(0.5, "VRM完了");
 }
 
 function registerVRMA(files) {
@@ -220,14 +295,37 @@ function registerVRMA(files) {
 }
 
 async function preloadVRMA() {
+    const total = vrmaFileMap.size;
+    let count = 0;
+
     for (const [name, file] of vrmaFileMap) {
-        const gltf = await new Promise(res => {
-            loader.load(URL.createObjectURL(file), res);
-        });
-        const anim = gltf.userData.vrmAnimations?.[0];
-        if (!anim) continue;
-        const clip = createVRMAnimationClip(anim, currentVrm);
-        vrmaClipMap.set(name, clip);
+        try {
+            const gltf = await new Promise((res, rej) => {
+                loader.load(
+                    URL.createObjectURL(file),
+                    res,
+                    undefined,
+                    rej
+                );
+            });
+
+            const anim = gltf.userData.vrmAnimations?.[0];
+            if (!anim) {
+                throw new Error("VRMAアニメーションが見つかりません");
+            }
+
+            const clip = createVRMAnimationClip(anim, currentVrm);
+            vrmaClipMap.set(name, clip);
+
+        } catch (err) {
+            showError(
+                "VRMA読み込み失敗",
+                `${name}: ${err.message}`
+            );
+        }
+
+        count++;
+        setProgress(0.5 + (count / total) * 0.5, "VRMA読み込み");
     }
 }
 
@@ -327,18 +425,25 @@ async function playAction(action) {
 function renderLoop() {
     function loop() {
         requestAnimationFrame(loop);
+
+        if (!isReadyToRender) return;
+
         clock.update();
         const delta = clock.getDelta();
+
         if (mixer) mixer.update(delta);
+
         if (currentVrm) {
             currentVrm.update(delta);
             updateExpression();
             updateBlink(delta);
             updateEyeSaccade(delta);
             updateBreathing(delta);
+
             const m = currentVrm.expressionManager;
             if (m) m.update();
         }
+
         controls.update();
         renderer.render(scene, camera);
     }
@@ -440,4 +545,109 @@ function updateBreathing(delta) {
     breathingTime += delta * breathSpeed;
     chest.rotation.x = Math.sin(breathingTime * Math.PI * 2) *
         breathAmount;
+}
+
+function showError(title, message, timeout = 5000) {
+    const container = document.getElementById("error-container");
+
+    const banner = document.createElement("div");
+    banner.className = "error-banner";
+
+    banner.innerHTML = `
+    <div class="error-banner-icon">⚠</div>
+    <div class="error-banner-content">
+      <div class="error-banner-title">${title}</div>
+      <div class="error-banner-message">${message}</div>
+    </div>
+    <button class="error-banner-close">&times;</button>
+  `;
+
+    // 閉じる処理
+    const remove = () => {
+        banner.classList.add("removing");
+        setTimeout(() => banner.remove(), 200);
+    };
+
+    banner.querySelector(".error-banner-close").onclick = remove;
+
+    container.appendChild(banner);
+
+    // 自動削除
+    if (timeout > 0) {
+        setTimeout(remove, timeout);
+    }
+}
+
+function setIdleState() {
+    btnSelect.style.display = "block";
+    backBtn.style.display = "block";
+}
+
+function setLoadingState() {
+    btnSelect.style.display = "none";
+    backBtn.style.display = "none";
+}
+
+function resetAppState() {
+    // VRM削除
+    if (currentVrm) {
+        scene?.remove(currentVrm.scene);
+        currentVrm = null;
+    }
+
+    // Animation
+    if (mixer) {
+        mixer.stopAllAction();
+        mixer = null;
+    }
+
+    currentAction = null;
+    idleAction = null;
+
+    // VRMA
+    vrmaFileMap.clear();
+    vrmaClipMap.clear();
+
+    // Expression
+    resetExpressions();
+
+    // Scene破棄（完全リセット）
+    if (renderer) {
+        renderer.dispose();
+        renderer = null;
+    }
+
+    scene = null;
+    camera = null;
+    controls = null;
+    loader = null;
+}
+
+function handleError(error) {
+    console.error(error);
+
+    showError(
+        "読み込みエラー",
+        error?.message || "不明なエラー"
+    );
+
+    resetAppState();
+    setIdleState();
+}
+
+function setProgress(value, label = "") {
+    const percent = Math.floor(value * 100);
+    progressFill.style.width = percent + "%";
+    progressText.textContent = label
+        ? `${label} (${percent}%)`
+        : `${percent}%`;
+}
+
+function showProgress() {
+    progressContainer.classList.remove("hidden");
+    setProgress(0);
+}
+
+function hideProgress() {
+    progressContainer.classList.add("hidden");
 }

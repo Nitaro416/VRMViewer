@@ -5,11 +5,18 @@
         <link rel="stylesheet" href="style.css">
     </head>
     <body>
+        <div class="error-banner-container" id="error-container"></div>
+        <canvas id="canvas"></canvas>
+        <div id="progress-container" class="progress-container hidden">
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+            <div id="progress-text" class="progress-text">0%</div>
+        </div>
         <div id="ui">
             <button id="selectFolder" class="modern-btn">Select Folder</button>
-            <div id="loader" class="loader hidden"></div>
+            <button id="backBtn" class="modern-btn"><a href="howto.html">How To</a></button>
         </div>
-        <canvas id="canvas"></canvas>
         <script type="module" src="main.js"></script>
     </body>
 </html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="doc-container">
+    <div class="fixed-top-right">
+        <button><a href="sidebar.html">> back</a></button>
+    </div>
+    <div class="doc-header">
+        <div class="doc-title">VRM1.0 Viewer 使い方</div>
+        <div class="doc-description">
+            操作手順を説明します。
+        </div>
+    </div>
+
+    <div class="doc-section">
+        <div class="doc-section-title">準備</div>
+        <div class="doc-steps">
+            <div class="doc-step">
+                <div class="doc-step-number">1</div>
+                <div class="doc-step-content">
+                    <div class="doc-step-title">ファイルを配置</div>
+                    <div class="doc-step-desc">
+                        必要なVRMと関連ファイルを同一フォルダに配置します。
+                    </div>
+
+                    <div class="doc-code">
+                        指定するフォルダ/<br>
+                        ├ character.vrm<br>
+                        ├ anime1.vrma<br>
+                        ├ anime2.vrma<br>
+                        ├ anime3.vrma<br>
+                        └ config.json
+                    </div>
+
+                    <div class="doc-note">
+                        <div>ファイル名は完全に同じである必要はありません。</div>
+                        <div>拡張子が一致していれば読み込みます。</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="doc-step">
+                <div class="doc-step-number">2</div>
+                <div class="doc-step-content">
+                    <div class="doc-step-title">JSONファイルを準備</div>
+                    <div class="doc-step-desc">
+                        以下の構成にしてください。
+                    </div>
+
+                    <div class="doc-step-desc">
+                        <div class="vscode-editor">
+                            <div class="doc-code">
+                                <div>[</div>
+                                <div>&nbsp;&nbsp;{</div>
+                                <div>&nbsp;&nbsp; &nbsp;&nbsp;"background": "#00b148"</div>
+                                <div>&nbsp;&nbsp;},</div>
+                                <div>&nbsp;&nbsp;{</div>
+                                <div>&nbsp;&nbsp;&nbsp;&nbsp;"vrma": "anime1.vrma",</div>
+                                <div>&nbsp;&nbsp;&nbsp;&nbsp;"exp": { "happy": 0.8 }</div>
+                                <div>&nbsp;&nbsp;},</div>
+                                <div>&nbsp;&nbsp;{</div>
+                                <div>&nbsp;&nbsp;&nbsp;&nbsp;"vrma": "anime2.vrma",</div>
+                                <div>&nbsp;&nbsp;&nbsp;&nbsp;"exp": { "angry": 1.0, "blink": 0.5 }</div>
+                                <div>&nbsp;&nbsp;},</div>
+                                <div>&nbsp;&nbsp;{</div>
+                                <div>&nbsp;&nbsp;&nbsp;&nbsp;"vrma": "anime3.vrma",</div>
+                                <div>&nbsp;&nbsp;&nbsp;&nbsp;"exp": {}</div>
+                                <div>&nbsp;&nbsp;},</div>
+                                <div>&nbsp;&nbsp;{</div>
+                                <div>&nbsp;&nbsp;&nbsp;&nbsp;"vrma": "",</div>
+                                <div>&nbsp;&nbsp;&nbsp;&nbsp;"exp": {}</div>
+                                <div>&nbsp;&nbsp;}</div>
+                                <div>]</div>
+                            </div>
+                        </div>
+                        <div class="doc-warning">
+                            ファイルの読み込み個数に制限はありませんが、多ければ多いほど読み込みに時間がかかります。
+                        </div>
+                        <div class="doc-note">
+                            上記のサンプル通りで、vrmaファイルが無い場合は""だけにしてください。
+                            expには、Expressionを指定してください。独自に作ったものも指定できます。0～1を指定してください。
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="doc-step">
+                <div class="doc-step-number">3</div>
+                <div class="doc-step-content">
+                    <div class="doc-step-title">Viewerを起動</div>
+                    <div class="doc-step-desc">
+                        Select Folderボタンをクリックして、ファイルを指定します。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="doc-section">
+        <div class="doc-section-title">操作方法</div>
+        <div class="doc-steps">
+            <div class="doc-step">
+                <div class="doc-step-number">1</div>
+                <div class="doc-step-content">
+                    <div class="doc-step-title">マウス操作</div>
+                    <div class="doc-step-desc">
+                        右クリック、左クリック、マウスホイールクリックでカメラ移動や視点変更など可能です
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="doc-section">
+        <div class="doc-section-title">お問い合わせ</div>
+        <div class="doc-step-desc">
+            不具合などありましたら、以下のページでご連絡いただけますと幸いです。
+            まだまだ作成したばかりで、至らない点も多く申し訳ありません。
+        </div>
+        <br>
+        <div class="doc-steps">
+            <div class="doc-step">
+                <div class="doc-step-number">1</div>
+                <a href="https://github.com/Nitaro416/VRMViewer" class="font-size" target="_blank">Github</a>
+            </div>
+            <div class="doc-step">
+                <div class="doc-step-number">2</div>
+                <a href="https://chromewebstore.google.com/detail/vrm10-viewer/bhgadlfefdceajafgadpkojphmkkhfge?authuser=1&hl=ja"
+                   class="font-size" target="_blank">ChromeStore</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
